@@ -22,12 +22,12 @@ if [ "$DEBUG" != "" ]; then
   set -x
 fi
 
-declare -a CLI_APPS=(hw_framework_config helloworld qotd)
-declare -a WEB_APPS=(asp-net-hello-world asp-net-hello-world-envvar)
+declare -a CLI_APPS=()
+declare -a WEB_APPS=(asp-net-hello-world-envvar)
 
 test_dir="$(readlink -zf $(dirname "${BASH_SOURCE[0]}"))"
 image_dir=$(readlink -zf ${test_dir}/..)
-dotnet_version="1.0.0-preview2-1-003176"
+dotnet_version="1.0.0-rc4-004917"
 sample_app_url="https://github.com/redhat-developer/s2i-dotnetcore-ex.git"
 
 test_port=8080
@@ -457,7 +457,7 @@ else
     cleanup ${app}
   done
 
-  test_new_web_app
+  # test_new_web_app
 fi
 
 info "All tests finished successfully."

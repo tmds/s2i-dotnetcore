@@ -50,10 +50,9 @@ for v in ${VERSIONS}; do
       docker build -f Dockerfile.rhel7 -t ${img_name} .
       check_result_msg $? "Building Docker image ${img_name} FAILED!"
     fi
-    # tests are project.json
-    # echo "Running tests on image ${img_name} ..."
-    # ./test/run
-    # check_result_msg $? "Tests for image ${img_name} FAILED!"
+    echo "Running tests on image ${img_name} ..."
+    ./test/run
+    check_result_msg $? "Tests for image ${img_name} FAILED!"
   popd &>/dev/null
 done
 

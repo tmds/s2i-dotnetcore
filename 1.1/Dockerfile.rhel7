@@ -41,7 +41,7 @@ RUN yum install -y yum-utils && \
     yum-config-manager --enable rhel-7-server-dotnet-rpms && \
     yum-config-manager --enable rhel-7-server-rpms && \
     yum-config-manager --enable rhel-7-server-ose-3.2-rpms && \
-    yum install -y --setopt=tsflags=nodocs rh-dotnetcore11 nss_wrapper tar rh-nodejs4-npm && \
+    yum install -y --setopt=tsflags=nodocs rh-dotnetcore10 rh-dotnetcore11 nss_wrapper tar rh-nodejs4-npm && \
     yum clean all && \
     mkdir -p /opt/app-root/src /opt/app-root/publish && \
     useradd -u 1001 -r -g 0 -d /opt/app-root/src -s /sbin/nologin \
@@ -53,7 +53,8 @@ RUN curl https://dotnetcli.azureedge.net/dotnet/Sdk/1.0.0-rc4-004917/dotnet-dev-
     mkdir /tmp/dotnet-sdk && \
     tar xf /tmp/dotnet-sdk.tar.gz -C /tmp/dotnet-sdk && \
     mv /tmp/dotnet-sdk/sdk/* /opt/rh/rh-dotnetcore11/root/usr/lib64/dotnetcore/sdk && \
-    rm -rf /tmp/dotnet-sdk.tar.gz /tmp/dotnet-sdk
+    rm -rf /tmp/dotnet-sdk.tar.gz /tmp/dotnet-sdk && \
+    ln -s /opt/rh/rh-dotnetcore10/root/usr/lib64/dotnetcore/shared/Microsoft.NETCore.App/1.0.4 /opt/rh/rh-dotnetcore11/root/usr/lib64/dotnetcore/shared/Microsoft.NETCore.App/1.0.4
 
 # Switch to default app-user for cache population
 USER 1001
