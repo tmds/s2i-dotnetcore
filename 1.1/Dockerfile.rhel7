@@ -48,6 +48,13 @@ RUN yum install -y yum-utils && \
       -c "Default Application User" default && \
     chown -R 1001:0 /opt/app-root
 
+# Patch with 1.0.1 CLI
+RUN curl https://dotnetcli.azureedge.net/dotnet/Sdk/1.0.0-rc4-004917/dotnet-dev-rhel-x64.1.0.0-rc4-004917.tar.gz -o /tmp/dotnet-sdk.tar.gz && \
+    mkdir /tmp/dotnet-sdk && \
+    tar xf /tmp/dotnet-sdk.tar.gz -C /tmp/dotnet-sdk && \
+    mv /tmp/dotnet-sdk/sdk/* /opt/rh/rh-dotnetcore11/root/usr/lib64/dotnetcore/sdk && \
+    rm -rf /tmp/dotnet-sdk.tar.gz /tmp/dotnet-sdk
+
 # Switch to default app-user for cache population
 USER 1001
 
@@ -67,6 +74,7 @@ RUN cd /opt/app-root/src && mkdir cache-warmup && \
 
 # Switch back to root for changing dir ownership/permissions
 USER 0
+
 
 # In order to drop the root user, we have to make some directories world
 # writable as OpenShift default security model is to run the container under

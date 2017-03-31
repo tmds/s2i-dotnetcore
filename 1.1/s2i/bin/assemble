@@ -39,9 +39,6 @@ for SOURCE in $DOTNET_RESTORE_SOURCES; do
   RESTORE_OPTIONS="$RESTORE_OPTIONS --source $SOURCE"
 done
 
-echo "---> Installing dependencies ..."
-dotnet restore $RESTORE_OPTIONS
-
 # The publish operation fails when .NET framework targets are included in project.json
 # See https://github.com/dotnet/cli/issues/3636
 # This bug won't be fixed for project.json, workaround:
@@ -51,31 +48,32 @@ mkdir -p $DOTNET_REFERENCE_ASSEMBLIES_PATH/.NETFramework/{v1.1,v2.0,v3.5,v4.0,v4
 # run tests
 for TEST_PROJECT in $DOTNET_TEST_PROJECTS; do
     echo "---> Running test project: $TEST_PROJECT..."
-    dotnet test "$TEST_PROJECT" -f "$DOTNET_FRAMEWORK"
+    pushd "$TEST_PROJECT"
+    dotnet restore $RESTORE_OPTIONS
+    dotnet test -f "$DOTNET_FRAMEWORK"
+    popd
 done
 
-if [ "$DOTNET_PUBLISH" == "true" ]; then
-  # publish application
-  echo "---> Publishing application ..."
-  dotnet publish -f "$DOTNET_FRAMEWORK" -c "$DOTNET_CONFIGURATION" "$DOTNET_STARTUP_PROJECT" -o "$DOTNET_PUBLISH_PATH"
 
-  # check if the assembly used by the script exists
-  if [ ! -f "$DOTNET_PUBLISH_PATH/${APP_DLL_NAME}" ]; then
-    echo "error: Build output does not contain entrypoint assembly: ${APP_DLL_NAME}"
-    exit 1
-  fi
+# publish application
+echo "---> Publishing application ..."
+pushd "$DOTNET_STARTUP_PROJECT"
+dotnet restore $RESTORE_OPTIONS
+dotnet publish -f "$DOTNET_FRAMEWORK" -c "$DOTNET_CONFIGURATION" -o "$DOTNET_PUBLISH_PATH"
+popd
 
-  # Create run script in publish folder
-  cat << EOF >"$DOTNET_RUN_SCRIPT"
+# check if the assembly used by the script exists
+if [ ! -f "$DOTNET_PUBLISH_PATH/${APP_DLL_NAME}" ]; then
+  echo "error: Build output does not contain entrypoint assembly: ${APP_DLL_NAME}"
+  exit 1
+fi
+
+# Create run script in publish folder
+cat << EOF >"$DOTNET_RUN_SCRIPT"
 #!/bin/bash
 exec dotnet ${APP_DLL_NAME} \$@
 EOF
   chmod +x "$DOTNET_RUN_SCRIPT"
-else
-  # build application
-  echo "---> Building application ..."
-  dotnet build -f "$DOTNET_FRAMEWORK" -c "$DOTNET_CONFIGURATION" "$DOTNET_STARTUP_PROJECT"
-fi
 
 # cleanup
 rm -rf $DOTNET_REFERENCE_ASSEMBLIES_PATH
