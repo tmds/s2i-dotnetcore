@@ -49,7 +49,7 @@ RUN yum install -y yum-utils && \
     chown -R 1001:0 /opt/app-root
 
 # Patch with 1.0.1 CLI
-RUN curl https://dotnetcli.azureedge.net/dotnet/Sdk/1.0.0-rc4-004917/dotnet-dev-rhel-x64.1.0.0-rc4-004917.tar.gz -o /tmp/dotnet-sdk.tar.gz && \
+RUN curl https://download.microsoft.com/download/F/D/5/FD52A2F7-65B6-4912-AEDD-4015DF6D8D22/dotnet-dev-rhel-x64.1.0.1.tar.gz -o /tmp/dotnet-sdk.tar.gz && \
     mkdir /tmp/dotnet-sdk && \
     tar xf /tmp/dotnet-sdk.tar.gz -C /tmp/dotnet-sdk && \
     mv /tmp/dotnet-sdk/sdk/* /opt/rh/rh-dotnetcore11/root/usr/lib64/dotnetcore/sdk && \
