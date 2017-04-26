@@ -93,15 +93,6 @@ a `.s2i/environment` file inside your source code repository.
     Used to select the project to run. This must be the folder containing
     `project.json`. Defaults to `.`.
 
-* **DOTNET_PUBLISH**
-
-    Used to control whether the application should be built by executing
-    `dotnet build` or `dotnet publish`. To publish the application set the
-    value to `true`. It is recommended to publish your application. For
-    backwards compatibility, the default is `false`. In the next major release,
-    this variable will be removed and the builder will always publish the
-    application.
-
 * **DOTNET_ASSEMBLY_NAME**
 
     Used to select the assembly to run. This must NOT include the `.dll` extension.
