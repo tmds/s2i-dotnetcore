@@ -7,7 +7,7 @@ DOTNET_CONFIGURATION="${DOTNET_CONFIGURATION:-Release}"
 DOTNET_STARTUP_PROJECT="${DOTNET_STARTUP_PROJECT:-.}"
 
 # Private environment
-DOTNET_FRAMEWORK="netcoreapp1.1"
+DOTNET_FRAMEWORK="netcoreapp2.0"
 
 # npm
 if [ -n "${DOTNET_NPM_TOOLS}" ]; then
@@ -60,7 +60,7 @@ dotnet restore $RESTORE_OPTIONS
 # See https://github.com/dotnet/cli/issues/3636
 # This bug won't be fixed for project.json, workaround:
 export DOTNET_REFERENCE_ASSEMBLIES_PATH=/tmp/reference_assemblies
-mkdir -p $DOTNET_REFERENCE_ASSEMBLIES_PATH/.NETFramework/{v1.1,v2.0,v3.5,v4.0,v4.0.3,v4.5,v4.5.1,v4.5.2,v4.6,v4.6.1,v4.6.2}
+mkdir -p $DOTNET_REFERENCE_ASSEMBLIES_PATH/.NETFramework/{v2.0,v2.0,v3.5,v4.0,v4.0.3,v4.5,v4.5.1,v4.5.2,v4.6,v4.6.1,v4.6.2}
 
 # run tests
 for TEST_PROJECT in $DOTNET_TEST_PROJECTS; do
