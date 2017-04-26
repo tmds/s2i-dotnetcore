@@ -55,16 +55,13 @@ USER 1001
 # Don't download/extract docs for nuget packages
 ENV NUGET_XMLDOC_MODE=skip
 
-# - Initialize the .Net cache via 'scl enable rh-dotnet20 -- dotnet new'
-#   Move to the proper command to do this once https://github.com/dotnet/cli/issues/3692 is fixed.
-# - Removal of /tmp/NuGetScratch is needed due to:
-#   https://github.com/NuGet/Home/issues/2793
-RUN cd /opt/app-root/src && mkdir cache-warmup && \
-    cd cache-warmup && \
-    scl enable rh-dotnet20 -- dotnet new && \
-    cd .. && \
-    rm -rf cache-warmup && \
-    rm -rf /tmp/NuGetScratch
+# TODO: set source argument to: https://api.nuget.org/v3/index.json
+# TODO: scl enable rh-dotnet20 --
+# Create NuGet package cache
+COPY packagescache.csproj /tmp/warmup/packagescache.csproj
+RUN dotnet restore /tmp/warmup/packagescache.csproj \
+      --source https://dotnet.myget.org/F/dotnet-core/api/v3/index.json \
+    && rm -rf /tmp/warmup/
 
 # Switch back to root for changing dir ownership/permissions
 USER 0
