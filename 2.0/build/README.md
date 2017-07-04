@@ -136,6 +136,13 @@ a `.s2i/environment` file inside your source code repository.
 
     Publish assuming the runtime image contains the ASP.NET Core runtime store. Defaults to `false`.
 
+MSBuild Properties
+------------------
+
+* **OpenShift**
+
+    The `OpenShift` property reflects if the build is performed in OpenShift (`true`) or not (`false`).
+
 NPM
 ---
 

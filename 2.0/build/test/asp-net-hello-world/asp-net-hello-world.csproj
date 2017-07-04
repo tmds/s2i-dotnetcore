@@ -12,7 +12,8 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- This project can only compile when OpenShift is set to true  -->
+  <ItemGroup Condition="'$(OpenShift)'=='true'">
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="1.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="1.1.1" />
