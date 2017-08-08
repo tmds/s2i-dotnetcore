@@ -32,6 +32,13 @@ $ docker build -t s2i-dotnetcore-ex .
 ```
 
 Start a container:
+
+```
+$ docker run -p 8080:8080 s2i-dotnetcore-ex
+```
+
+Fetch a webpage:
+
 ```
 $ docker run --rm -p 8080:8080 s2i-dotnetcore-ex
 ```
