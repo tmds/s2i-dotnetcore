@@ -6,12 +6,12 @@
 # IMAGE_NAME specifies a name of the candidate image used for testing.
 # The image has to be available before this script is executed.
 #
+# OPENSHIFT_ONLY environment variable, if 'true', only tests features used by
+# OpenShift's try-it feature.
+#
 # TEST_PORT specifies the port on the docker host to be used for testing.
 # The container application will still use 8080, but this port will be bound
 # to the running container when testing asp.net projects.
-#
-# OPENSHIFT_ONLY environment variable, if 'true', only tests features used by
-# OpenShift's try-it feature.
 #
 # DEBUG environment variable, if not empty, makes 'run' to log every step
 # of testing.
@@ -19,26 +19,30 @@
 # Example usage: $ sudo ./test/run
 
 if [ "$IMAGE_OS" = "CENTOS" ]; then
-  IMAGE_NAME=${IMAGE_NAME:-dotnet/dotnet-20-centos7}
-  RUNTIME_IMAGE_NAME=${RUNTIME_IMAGE_NAME:-dotnet/dotnet-20-runtime-centos7}
+  IMAGE_NAME=${IMAGE_NAME:-dotnet/dotnet-21-centos7}
+  RUNTIME_IMAGE_NAME=${RUNTIME_IMAGE_NAME:-dotnet/dotnet-21-runtime-centos7}
 else
-  IMAGE_NAME=${IMAGE_NAME:-dotnet/dotnet-20-rhel7}
-  RUNTIME_IMAGE_NAME=${RUNTIME_IMAGE_NAME:-dotnet/dotnet-20-runtime-rhel7}
+  IMAGE_NAME=${IMAGE_NAME:-dotnet/dotnet-21-rhel7}
+  RUNTIME_IMAGE_NAME=${RUNTIME_IMAGE_NAME:-dotnet/dotnet-21-runtime-rhel7}
 fi
 OPENSHIFT_ONLY=${OPENSHIFT_ONLY:-false}
 
 test_dir="$(readlink -zf $(dirname "${BASH_SOURCE[0]}"))"
 source ${test_dir}/testcommon
 
-sdk_default_version="2.0.3"
+# Versions of Microsoft.AspNetCore.{All,App} packages that are known by latest RHEL sdk.
+aspnet_latest_app_version=2.1.5
+aspnet_latest_all_version=2.1.5
 if [ "$IMAGE_OS" = "CENTOS" ]; then
-sdk_latest_version="2.0.3"
-sdk_versions=( "2.0.3" )
+# sdk versions supported on CentOS
+sdk_versions=( "2.1.302" )
 else
-sdk_latest_version="2.1.202"
-sdk_versions=( "2.0.3" "2.1.202" )
+# sdk versions supported on RHEL
+sdk_versions=( "2.1.302" "2.1.403" )
 fi
 
+sdk_default_version=${sdk_versions[0]}
+sdk_latest_version=${sdk_versions[-1]}
 sample_app_url="https://github.com/redhat-developer/s2i-dotnetcore-ex.git"
 
 s2i_image_tag() {
@@ -161,7 +165,7 @@ test_image() {
 
   # verify npm is available
   local image_npm_version=$(docker_run ${IMAGE_NAME} 'npm --version')
-  assert_equal "${image_npm_version}" "3.10.9"
+  assert_equal "${image_npm_version}" "5.6.0"
 }
 
 test_consoleapp() {
@@ -314,7 +318,10 @@ test_config_1() {
   local s2i_build=$(s2i_build_output_log ${app} ${image})
   # find bower and packed all
   local bower_path=$(docker_run ${image} bash -c "command -v bower")
+  local watch_path=$(docker_run ${image} bash -c "command -v dotnet-watch")
+  local serve_path=$(docker_run ${image} bash -c "command -v dotnet-serve")
   local packed_app=$(docker_run ${image} ls /opt/app-root/app.tar.gz)
+  local src_folder_content=$(docker_run ${image} ls -a /opt/app-root/src)
   # start container
   local container=$(docker_run_d ${image})
   local url=$(container_url ${container})
@@ -330,7 +337,7 @@ test_config_1() {
   assert_contains "${s2i_build}" "Test run for /opt/app-root/src/test/test1"
   assert_contains "${s2i_build}" "Test run for /opt/app-root/src/test/test2"
   # DOTNET_ASSEMBLY_NAME=SampleApp
-  assert_contains "${s2i_build}" "/opt/app-root/src/src/app/bin/Debug/netcoreapp2.0/SampleApp.dll"
+  assert_contains "${s2i_build}" "/opt/app-root/src/src/app/bin/Debug/netcoreapp2.1/SampleApp.dll"
   # DOTNET_RESTORE_SOURCES=https://api.nuget.org/v3/index.json https://www.myget.org/F/s2i-dotnetcore
   assert_contains "${s2i_build}" "Installing S2iDotNetCoreDummy"
   # DOTNET_PACK=true
@@ -340,6 +347,14 @@ test_config_1() {
   assert_contains "${s2i_build}" "bower@"
   assert_contains "${s2i_build}" "gulp@"
   assert_equal "${bower_path}" "/opt/app-root/node_modules/.bin/bower"
+  # DOTNET_TOOLS=dotnet-watch@2.1.0-preview1-final dotnet-serve
+  assert_equal "${watch_path}" "/opt/app-root/.dotnet/tools/dotnet-watch"
+  assert_equal "${serve_path}" "/opt/app-root/.dotnet/tools/dotnet-serve"
+  assert_contains "${s2i_build}" "Tool 'dotnet-watch' (version '2.1.0-preview1-final') was successfully installed."
+  # DOTNET_RM_SRC=true
+  # The application folder contains a file and folder that starts with a '.', we verify that *all* files are removed.
+  assert_contains "${s2i_build}" "Removing sources..."
+  assert_contains "${src_folder_content}" "."$'\n'".."
 }
 
 test_config_2() {
@@ -364,10 +379,12 @@ test_config_2() {
   assert_contains "${s2i_build}" "Test run for /opt/app-root/src/test/test1"
   assert_contains "${s2i_build}" "Test run for /opt/app-root/src/test/test2"
 
-  # DOTNET_VERBOSITY=normal
+  # DOTNET_VERBOSITY=detailed
   ## Environment
   assert_contains "${s2i_build}" "Environment:"
-  assert_contains "${s2i_build}" "DOTNET_VERBOSITY=normal"
+  assert_contains "${s2i_build}" "DOTNET_VERBOSITY=detailed"
+  # DOTNET_RESTORE_DISABLE_PARALLEL=true                                                                                                                                     
+  assert_contains "${s2i_build}" "Running non-parallel restore"
   ## Test project restore
   assert_contains "${s2i_build}" 'Project "/opt/app-root/src/test/test1/test1.csproj" on node 1 (Restore target(s)).'
   ## Test project test
@@ -440,12 +457,12 @@ test_imagestream_sample() {
   # test the sample app defined with the imagestreams:
   # "sampleRepo": "https://github.com/redhat-developer/s2i-dotnetcore-ex.git",
   # "sampleContextDir": "app",
-  # "sampleRef": "dotnetcore-2.0"
+  # "sampleRef": "dotnetcore-2.1"
 
   # build image
   local image=$(s2i_image_tag sample)
   docker_rmi ${tag}
-  local s2i_build=$(s2i build --pull-policy=always --context-dir=app --ref=dotnetcore-2.0 https://github.com/redhat-developer/s2i-dotnetcore-ex.git ${IMAGE_NAME} ${image} 2>&1)
+  local s2i_build=$(s2i build --pull-policy=always --context-dir=app --ref=dotnetcore-2.1 https://github.com/redhat-developer/s2i-dotnetcore-ex.git ${IMAGE_NAME} ${image} 2>&1)
   # start container
   local container=$(docker_run_d ${image})
   local url=$(container_url ${container})
@@ -537,6 +554,100 @@ test_devmode() {
   test_devmode_change
 }
 
+docker_run_certificatecount()
+{
+  local app=certificatecount
+
+  # build image
+  local image=$(s2i_build ${app} "$@")
+  local output=$(docker_run ${image})
+  # cleanup
+  docker_rmi ${image}
+
+  echo $output | awk '{print $NF}'
+}
+
+test_certificates() {
+  test_start
+
+  local default_count=$(docker_run_certificatecount)
+  # It is unlikely to have less than 100 certificates.
+  if [ "$default_count" -lt 100 ]; then
+    error "Default number of certificates is too low: '${default_count}'"
+    exit 1
+  fi
+
+  # DOTNET_SSL_DIRS=/doesntexist
+  # We add a non existing directory, which must be ingored.
+  local default_count_with_nonexist=$(docker_run_certificatecount -e DOTNET_SSL_DIRS=/doesntexist)
+  assert_equal "$default_count" "$default_count_with_nonexist"
+
+  # DOTNET_SSL_DIRS=/doesntexist certdir1 certdir2 certdir3/cert.pem
+  # - /doesntexist      : ignored
+  # - certdir1          : contains 1 certificate in 1 file
+  # - certdir2          : contains 2 certificates in 1 file
+  # - certdir3/cert.pem : file containing 1 certificate
+  # DOTNET_RM_SRC=true to check these certificates are copied outside the src folder.
+  local count_with_additional=$(docker_run_certificatecount -e DOTNET_SSL_DIRS='/doesntexist certdir1 certdir2 certdir3/cert.pem')
+  assert_equal "$count_with_additional" "$(($default_count + 4))"
+}
+
+test_aspnet_implicit_using_latest()
+{
+  test_start
+
+  # aspnetcoreimplicitversion contains a versionless reference
+  # to the Microsoft.AspNetCore.{App,All} packages.
+  # after the build, the assemble script prints out the resolved versions.
+  local app=aspnetcoreimplicitversion
+  local image=$(s2i_image_tag ${app})
+
+  # verify the versionless references resolved to the latest version.
+  # build image
+  local s2i_build=$(s2i_build_output_log ${app} ${image})
+  # cleanup
+  docker_rmi ${image}
+
+  assert_contains "${s2i_build}" '"Microsoft.AspNetCore.All": "'${aspnet_latest_all_version}'"'
+  assert_contains "${s2i_build}" '"Microsoft.AspNetCore.App": "'${aspnet_latest_app_version}'"'
+
+  # verify aspnet_latest_{app,all}_version have the correct values.
+  # If this fails, the variables in the test and environment variables in the Dockerfiles must be updated.
+  if [ "$sdk_version" == "$sdk_latest_version" -a "$BUILD_CENTOS" != "true" ]; then
+    info verifying aspnet_latest_{app,all}
+
+    # build image
+    s2i_build=$(s2i_build_output_log ${app} ${image} -e LatestPatchVersionForAspNetCoreApp2_1='' -e LatestPatchVersionForAspNetCoreAll2_1='')
+    # cleanup
+    docker_rmi ${image}
+
+    assert_contains "${s2i_build}" '"Microsoft.AspNetCore.All": "'${aspnet_latest_all_version}'"'
+    assert_contains "${s2i_build}" '"Microsoft.AspNetCore.App": "'${aspnet_latest_app_version}'"'
+  fi
+}
+
+test_binary()
+{
+  test_start
+
+  # precompiled contains 2 pre-compiled .net console applications
+  # console.dll: prints out "Hello World!"
+  # world2/console.dll: prints out "Hello World2!"
+  local app=precompiled
+
+  # verify the console.dll entry point assembly is detected and ran
+  local image=$(s2i_build ${app})
+  local output=$(docker_run ${image})
+  docker_rmi ${image}
+  assert_contains "${output}" "Hello World!"
+
+  # verify we can run world2/console.dll by setting DOTNET_STARTUP_ASSEMBLY
+  image=$(s2i_build ${app} -e DOTNET_STARTUP_ASSEMBLY=world2/console.dll)
+  output=$(docker_run ${image})
+  docker_rmi ${image}
+  assert_contains "${output}" "Hello World2!"
+}
+
 info "Testing ${IMAGE_NAME}"
 
 if [ ${OPENSHIFT_ONLY} != true ]; then
@@ -547,6 +658,7 @@ if [ ${OPENSHIFT_ONLY} != true ]; then
     test_config
     test_usage
     test_s2i_sdk_version $sdk_version
+    test_aspnet_implicit_using_latest
     test_consoleapp
     test_multiframework
     test_fsharp
@@ -557,6 +669,8 @@ if [ ${OPENSHIFT_ONLY} != true ]; then
     test_split_build
     test_templates
     test_user
+    test_certificates
+    test_binary
   done
   # when unset, default to the lowest sdk version
   info "default sdk(${sdk_default_version}):"
