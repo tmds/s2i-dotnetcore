@@ -108,7 +108,7 @@ docker_get_env() {
   local image="$1"
   local name="$2"
 
-  local env=$(docker inspect -f '{{range $index, $value := .Config.Env}}{{println $value}}{{end}}' ${image})
+  local env=$(docker inspect -f '{{range $index, $value := .ContainerConfig.Env}}{{println $value}}{{end}}' ${image})
   local line=$(echo "$env" | grep "${name}=")
   echo ${line#*=}
 }
