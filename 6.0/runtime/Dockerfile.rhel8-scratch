@@ -1,0 +1,18 @@
+FROM ubi8 AS source
+RUN INSTALL_PKGS="aspnetcore-runtime-6.0" &&\
+    dnf install --installroot /rootfs --setopt=module_platform_id=platform:el8 --setopt=install_weak_deps=False --setopt=module_platform_id=platform:el8 --releasever 8 --nodocs -y $INSTALL_PKGS && \
+    # Add non-root user.
+    echo "default:x:1001:0::/nohome:/noshell" >>/rootfs/etc/passwd && \
+    # Remove dnf data.
+    dnf clean all --installroot /rootfs  && rm -rf /rootfs/var/cache/* /rootfs/var/log/dnf* /rootfs/var/log/yum.* /rootfs/var/lib/rpm /rootfs/var/lib/dnf && \
+    # Remove all bash executables. Only keep 'dotnet'.
+    rm $(ls -d /rootfs/usr/bin/* | grep -v dotnet) && \
+    # Remove timezone information.
+    rm -rf /rootfs/usr/share/zoneinfo
+
+FROM scratch
+COPY --from=source /rootfs/ /
+ENV ASPNETCORE_URLS=http://*:8080
+USER 1001
+ENTRYPOINT ["/usr/bin/dotnet"]
+CMD ["--info"]
