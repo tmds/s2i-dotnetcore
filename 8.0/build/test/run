@@ -30,6 +30,7 @@
 #
 # Example usage: $ sudo ./test/run
 
+ps aux
 
 STOP_ON_ERROR=${STOP_ON_ERROR:-true}
 
@@ -680,5 +681,7 @@ if [ "$STOP_ON_ERROR" != "true" ]; then
     exit 1
   fi
 fi
+
+ps aux
 
 info "All tests finished successfully."
