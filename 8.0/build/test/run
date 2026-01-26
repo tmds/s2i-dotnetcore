@@ -671,6 +671,8 @@ else
   test_imagestream_sample
 fi
 
+ps aux
+
 if [ "$STOP_ON_ERROR" != "true" ]; then
   failures=(${TEST_FAILURES})
   if [ ${#failures[@]} -gt 0 ]; then
@@ -681,7 +683,5 @@ if [ "$STOP_ON_ERROR" != "true" ]; then
     exit 1
   fi
 fi
-
-ps aux
 
 info "All tests finished successfully."
