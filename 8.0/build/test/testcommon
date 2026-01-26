@@ -64,8 +64,12 @@ _PODMAN_PATH=$(command -v podman)
 _DOCKER_PATH=$(command -v docker)
 if [ -f "$_PODMAN_PATH" ]; then
   info "Using podman"
+  # Wrap podman to prevent fd 3 from leaking to catatonit and container processes
   docker() {
-    $_PODMAN_PATH "$@"
+    ( exec 3>&- ; exec $_PODMAN_PATH "$@" )
+  }
+  podman() {
+    ( exec 3>&- ; exec $_PODMAN_PATH "$@" )
   }
   USING_PODMAN=y
 elif [ -f "$_DOCKER_PATH" ]; then
